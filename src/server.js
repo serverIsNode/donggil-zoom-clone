@@ -14,13 +14,27 @@ app.get("/*", (req, res) => res.redirect("/"));
 const httpServer = http.createServer(app); // requestListener가 필요함
 const wsServer = SoketIO(httpServer);
 wsServer.on("connection", (socket) => {
-  socket.on("enter_room", (msg, done) => {
-    console.log(msg);
-    setTimeout(() => {
-      done();
-    }, 2000);
+  socket.onAny((event) => {
+    console.log(`Socket Event:${event}`);
+  });
+  socket.on("enter_room", (roomName, done) => {
+    console.log(socket.rooms);
+    socket.join(roomName);
+    done();
+    socket.to(roomName).emit("welcome");
+  });
+  // 연결이 끊겼을때
+  socket.on("disconnecting", () => {
+    socket.rooms.forEach((room) => {
+      socket.to(room).emit("bye");
+    });
+  });
+  socket.on("message", (msg, room, done) => {
+    socket.to(room).emit("message", msg);
+    done();
   });
 });
+
 // const wss = new WebSocketServer({ server });
 // 같은 서버에서 http, webSocket 둘다 작동(두개가 같은 포트에서 작동함)
 // http서버 위에 wss를 만든 것
